@@ -1,11 +1,19 @@
 #!/bin/sh
-
-# by PavelD v3 for MAC OS
+ 
+# by PavelD 
+# androidSuperScript for MAC OS
 # run command % chmod 754 ~/Downloads/androidSuperScript.sh
+
+# bash doc https://www.gnu.org/software/bash/manual/bash.html
+# adb doc https://developer.android.com/studio/command-line/adb
+# adb shell https://adbshell.com/commands
+
+IFS=$'\n'
 
 appMask="tsum"
 appMaskList=(*tma_aqsi* *atc_aqsi* *abc*)
 mainDir=~/Downloads
+dirOnPhone="/sdcard/Download" 
 
 myReturn=0 # флаг подключенного девайса
 
@@ -16,8 +24,8 @@ Exist() {
 Help_ () {
 
  clear
- echo "Устройство готово к использованию!"
- echo "Загрузите apk дистрибутивы ЦУМ в папку Загрузки (~/Downloads/)"
+ echo "Устройство готово к использованию!  "
+ echo "Загрузите apk дистрибутивы ЦУМ в папку Загрузки ($mainDir)"
  echo  "Выберите действие:"
    
  echo "1 - Удалить ЦУМ касса прод"
@@ -37,8 +45,9 @@ Help_ () {
  echo "r - Запустить приложение $appMask "
  echo "k - Завершить все приложения $appMask "
  echo "b - Установить уровень заряда батареи на 50%"
+ echo "g - Получить логи в $mainDir"
  
- echo "9 - Выход"
+ echo "q - Выход"
  echo "? - Справка"
  echo " "
  
@@ -59,36 +68,32 @@ flag=0
 }
 
 installAppFromList () {
-# installAppFrom "~/Downloads" "*.apk"
-i=0
-echo " " 
-#find ~/Downloads -type f -name ""$1"" -mtime -30  | sort -r ;
- for p in $(find ""$1"" -type f -name ""$2"" -mtime -30  | sort -r ;);
-    do
+#--installAppFromList ~/Downloads "*.apk"----
+#array=( $(ls -t $1"/"$2)) ls -t $1"/"$2 | cat -n;	;
+ i=0
+ for p in $(ls -t $1"/"$2) ; # 
+ do
    if [ -f $p ]; then
-   		 ((i++))
-   		 array[i]=""$p""
-   		 arrayi[i]=$i
-   		 echo "$i - $p"
-   	fi	 
-   	done	
-
-if [[ $i > 0 ]]; then   	
-   	
-echo "Введите номер приложения для установки, q - отмена" 
-   	
-while true; do
-read -r answer
- 
-  if [[ "$answer" == "q" ]] ; then return 1
+  		 ((i++))
+   		 array[i]="$p"
+   		# arrayi[i]=$i
+   		 echo "  " "$i - $p"	 
+   	fi
+done
+#---------------------------------------------
+if (( $i > 0 )) ; then   
+echo "Введите номер приложения для установки, q - отмена" 	 	  	
+ while true; do 
+ read -r answer 
+  if [[ "$answer" = [qQ$'\e'] ]] ; then return 1
   else
-  if [[ "${arrayi[*]}" =~ $answer ]] ; then
-  
+ #if [[ "${arrayi[*]}" =~ $answer ]] ; then
+ if  [ $answer -ge 1 -a $answer -le ${#array[@]} ] &> /dev/null   ; then
     echo "Установка " ${array[$answer]} ;
 	adb install -r  ${array[$answer]}  ; #&> /dev/null 
-	
 	adb shell exit ;
 	#return 1
+	echo "> "
   else
 	echo "Неверный ввод, повторите"	 
 	#echo "${arrayi[*]}" ;
@@ -99,6 +104,7 @@ done
 else
  echo "Нет приложений соответвующих маске $2"
  return 1
+ 
 fi
 }
 
@@ -117,10 +123,10 @@ nameAndVersion $appMask ;
 while true; do
 read -r answer
  
-  if [[ "$answer" == "q" ]] ; then return 1
+  if [[ "$answer" = [qQ$'\e'] ]] ; then return 1
   else
   if [[ "${arrayi[*]}" =~ $answer ]] ; then
-	adb shell monkey -p ${array[$answer]}  -c android.intent.category.LAUNCHER 1  &> /dev/null ;
+	adb shell monkey -p ${array[$answer]}  -c android.intent.category.LAUNCHER 1  &> /dev/null ; 
 	echo "Старт " ${array[$answer]} ;
 	adb shell exit ;
 	#return 1
@@ -132,21 +138,21 @@ done
 
 }
 
-# Поиск последнего измененного файла в последние 15 дней в папке ~/Downloads по маске и установка
+# Поиск последнего измененного файла в последние 15 дней в папке $mainDir по маске и установка
 FindLastFileAndInstallApp(){
 
 # маска "*atc_aqsi_test*"
  eval str1="$1"
  # echo "str1 = ${str1}"
- var11=$(find ~/Downloads -type f -name ""${str1}"" -mtime -30  | sort -r | sed -n '1p');
- # find ~/Downloads -type f -name "*tma*" -mtime -15  | sort -r
+ var11=$(find $mainDir -type f -name ""${str1}"" -mtime -30  | sort -r | sed -n '1p');
+ # find $mainDir -type f -name "*tma*" -mtime -15  | sort -r
 	if [ "$var11" == """" ] ; then
-	 echo "Нет приложений соответсвующих маске ~/Downloads/$1" ;
+	 echo "Нет приложений соответсвующих маске $mainDir/$1" ;
 	 echo "$var11"
 	else
 	# только показываем список приложений 
 		if [ "$2" == ""-n"" ] ; then
-		 find ~/Downloads -type f -name ""${str1}"" -mtime -30  | sort -r ;
+		 find $mainDir -type f -name ""${str1}"" -mtime -30  | sort -r ;
 			else  
 			     echo "Установка " $var11
 				adb install -r "$var11"
@@ -172,7 +178,7 @@ echo " "
  }
  
 # Удалить приложение
- uninstallApp () {
+uninstallApp () {
  eval str1="$1"
  var=$(adb shell pm list package "$str1" | cut -f 2 -d ":" )
 
@@ -186,7 +192,7 @@ fi
 
 batteryLevel ()
 {
-# если входим в диапазон 1..100 то ..
+# если входим в диапазон 1..100 
 if  [ $1 -ge 1 -a $1 -le 100 ] ; then
 
 	adb shell dumpsys battery set level $1 ;
@@ -218,6 +224,33 @@ installAppAll ()
  adb shell exit
 }
  
+ getLastLogFileTxt()
+ {
+ for p in $(adb shell ls -d -t "$1/*/") # получаем только каталоги
+  do
+   var=$(adb shell find $p -type f -name "$2" | sort -n | sed -n '1p')
+   #echo $var
+   flag=1;
+   if ! [[  $var == """" ]] ; then
+  	   # ss=$(basename "$p" & basename "$var" )
+  	   # ss=$(echo $ss | sed -e "s/ /_/g")
+ 	   # adb pull $var $mainDir/$ss &> /dev/null ;
+ 	   #echo "Выгрузка: $mainDir/$ss "
+ 	   
+ 	   adb pull $var $mainDir &> /dev/null ;
+ 	   echo "  Выгрузка: $mainDir/$(basename "$var")" 
+   else
+    flag=0;
+  fi 
+  done
+ 	 if  [ "$flag" == 1 ] ; then
+ 	    open $mainDir/ 
+ 	 	 else 
+ 	 	echo " Логи отсутсвуют в каталоге $1 $2" ;
+ 	 fi
+ }
+ 
+ 
  # снимки экрана
 screenCast (){
 dt=$(date '+%d.%m.%Y_%H.%M.%S');
@@ -226,8 +259,8 @@ if  [ "$1" == ""png"" ] ; then
 
  adb shell rm -f /sdcard/screen_.png ;
  adb shell screencap -p /sdcard/screen_.png ;
- adb pull /sdcard/screen_.png ~/Downloads/Screen_"$dt".png ;
- echo "\nScreenShot file: ~/Downloads/Screen_$dt.png" ;
+ adb pull /sdcard/screen_.png $mainDir/Screen_"$dt".png ;
+ echo "\nScreenShot file: $mainDir/Screen_$dt.png" ;
  
  fi
 
@@ -235,14 +268,19 @@ if  [ "$1" == ""video"" ] ; then
 
 adb shell rm -f /sdcard/video.mp4 ;
 adb shell screenrecord --size 640x480 --bit-rate 6000000 --time-limit 60 --verbose /sdcard/video.mp4 ;
-adb pull /sdcard/video.mp4 ~/Downloads/Video_"$dt".mp4 ;
-echo "\nVideo file: ~/Downloads/Video_$dt.mp4" ;
+adb pull /sdcard/video.mp4 $mainDir/Video_"$dt".mp4 ;
+echo "\nVideo file: $mainDir/Video_$dt.mp4" ;
+# ${VAR:-20}
 
 fi
 
 adb shell exit ;
-open ~/Downloads/
 
+ if [ -f "$mainDir/Video_$dt.mp4" ] || [ -f  "$mainDir/Screen_$dt.png" ] ; then
+  open $mainDir/
+  else
+   echo "Ошибка копирования в $mainDir/"
+ fi
 }
 
 # Проверка состояния подключения
@@ -289,37 +327,35 @@ StateDevice () {
 
 if ! Exist adb &&  ! Exist /opt/homebrew/bin/adb
  then
- echo 'ADB отсутсвует'
+ echo ' ADB отсутсвует'
 if ! Exist  brew  && ! Exist  /opt/homebrew/bin/brew  ; then
 
-  echo 'Будут установлены дополнительные компоненты, введите пароль при появлении запроса' >&2 ;
+  echo ' Будут установлены дополнительные компоненты, введите пароль при появлении запроса' >&2 ;
  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" ;
  %PATH=/opt/homebrew/bin/ export PATH ;
   exit 1
   
   else
-  echo 'Устанавливаем ADB...' ;
+  echo ' Устанавливаем ADB...' ;
   brew install android-platform-tools ;
   %PATH=/opt/homebrew/bin/ export PATH ;
 fi
 else
- echo 'ADB установлен!' ;
+ echo ' ADB установлен!' ;
  #adb devices
  fi
  
  StateDevice
 
- if  [ "$myReturn" ==  0] ;
+ if  [ "$myReturn" ==  0 ] ;
  then
- StateDevice
+  StateDevice
   else
- 
    Help_
-
    while true; do
-  
+   
     read -r runCommand
-   case $runCommand in
+    case $runCommand in
             [1] ) uninstallApp "ru.tsum.mobile.assistant.aqsi_prod" ;;
             [2] ) uninstallApp "ru.tsum.mobile.assistant.aqsi_test" ;;
             [3] ) uninstallApp "ru.tsum.couriers.aqsi_prod" ;;
@@ -328,19 +364,19 @@ else
             [6] ) FindLastFileAndInstallApp "*tma_aqsi_test*" ;;
             [7] ) nameAndVersion $appMask ;;
             [8] ) screenCast "video" ;;
-            [9] ) exit 1 ;;
+            [qQ$'\e'] ) exit 1 ;;
             [?] ) Help_ ;;
-            [s] ) screenCast "png" ;;
-            [d] ) uninstallAppAll $appMask ;;
-            [a] ) installAppAll ${appMaskList[*]} ;; # installAppAll "*app1*" "*app2*"  .. from folder Downloads 
-            [l] ) FindLastFileAndInstallApp "*.apk*" "-n" ;; # список без установки
-            [c] ) FindLastFileAndInstallApp "*abc*" ;;
-            [m] ) FindLastFileAndInstallApp "*brs*" ;;
-            [i] ) installAppFromList $mainDir "*.apk" ;;
+            [sS] ) screenCast "png" ;;
+            [dD] ) uninstallAppAll $appMask ;;
+            [aA] ) installAppAll ${appMaskList[*]} ;; # installAppAll "*app1*" "*app2*"  .. from folder Downloads 
+            [lL] ) FindLastFileAndInstallApp "*.apk*" "-n" ;; # список без установки
+            [cC] ) FindLastFileAndInstallApp "*abc*" ;;
+            [iI] ) installAppFromList $mainDir "*.apk" ;;
+            [gG] ) getLastLogFileTxt $dirOnPhone "*.txt" ;;
             
-            [r] ) runApp $appMask  ;;
-            [k] ) killApp $appMask ;;
-            [b] ) batteryLevel 50 ;;
+            [rR] ) runApp $appMask  ;;
+            [kK] ) killApp $appMask ;;
+            [bB] ) batteryLevel 50 ;;
              * ) echo "Ошибочный ввод" ;;
         esac
         
@@ -351,4 +387,3 @@ else
   exit 1
 fi
 
-# старт adb shell monkey -p app.package.name -c android.intent.category.LAUNCHER 1 
